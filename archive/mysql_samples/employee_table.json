@@ -1,0 +1,222 @@
+[
+  {
+    "EMPID": 1,
+    "NAME": "Xyon McFluff",
+    "SALARY": 50000,
+    "BONUS": 10000,
+    "CITY": "New York",
+    "JOINING_DATE": "2020-01-01 10:00:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Engineering",
+    "TITLE": "Manager"
+  },
+  {
+    "EMPID": 2,
+    "NAME": "Twinkle Luna",
+    "SALARY": 60000,
+    "BONUS": 5000,
+    "CITY": "Chicago",
+    "JOINING_DATE": "2018-05-15 11:30:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Sales",
+    "TITLE": "Executive"
+  },
+  {
+    "EMPID": 3,
+    "NAME": "Zorfendorf",
+    "SALARY": 45000,
+    "BONUS": 2000,
+    "CITY": "Miami",
+    "JOINING_DATE": "2021-09-01 09:15:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Marketing",
+    "TITLE": "Associate"
+  },
+  {
+    "EMPID": 4,
+    "NAME": "Gloobinorg",
+    "SALARY": 72000,
+    "BONUS": 8000,
+    "CITY": "Seattle",
+    "JOINING_DATE": "2017-04-05 14:20:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "IT",
+    "TITLE": "Manager"
+  },
+  {
+    "EMPID": 5,
+    "NAME": "Bonkliwop",
+    "SALARY": 65000,
+    "BONUS": 6000,
+    "CITY": "Denver",
+    "JOINING_DATE": "2020-11-24 08:45:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Sales",
+    "TITLE": "Associate"
+  },
+  {
+    "EMPID": 6,
+    "NAME": "Ploopdewoop",
+    "SALARY": 55000,
+    "BONUS": 4000,
+    "CITY": "Philadelphia",
+    "JOINING_DATE": "2019-03-11 10:25:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Marketing",
+    "TITLE": "Executive"
+  },
+  {
+    "EMPID": 7,
+    "NAME": "Flooblelobber",
+    "SALARY": 80000,
+    "BONUS": 9000,
+    "CITY": "San Francisco",
+    "JOINING_DATE": "2016-08-20 12:35:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Engineering",
+    "TITLE": "Lead"
+  },
+  {
+    "EMPID": 8,
+    "NAME": "Blippitybloop",
+    "SALARY": 57000,
+    "BONUS": 3000,
+    "CITY": "Boston",
+    "JOINING_DATE": "2018-12-01 15:00:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Finance",
+    "TITLE": "Analyst"
+  },
+  {
+    "EMPID": 9,
+    "NAME": "Snorkeldink",
+    "SALARY": 74000,
+    "BONUS": 7000,
+    "CITY": "Atlanta",
+    "JOINING_DATE": "2015-10-07 16:15:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "IT",
+    "TITLE": "Lead"
+  },
+  {
+    "EMPID": 10,
+    "NAME": "Wuggawugga",
+    "SALARY": 69000,
+    "BONUS": 5000,
+    "CITY": "Austin",
+    "JOINING_DATE": "2017-06-19 13:45:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Engineering",
+    "TITLE": "Manager"
+  },
+  {
+    "EMPID": 11,
+    "NAME": "Foofletoot",
+    "SALARY": 62000,
+    "BONUS": 4000,
+    "CITY": "San Diego",
+    "JOINING_DATE": "2019-02-24 17:30:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Sales",
+    "TITLE": "Associate"
+  },
+  {
+    "EMPID": 12,
+    "NAME": "Bonkbonk",
+    "SALARY": 82000,
+    "BONUS": 8000,
+    "CITY": "Silicon Valley",
+    "JOINING_DATE": "2014-12-05 09:45:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Engineering",
+    "TITLE": "Director"
+  },
+  {
+    "EMPID": 13,
+    "NAME": "Zippityzoom",
+    "SALARY": 78000,
+    "BONUS": 7500,
+    "CITY": "New York",
+    "JOINING_DATE": "2016-03-08 11:00:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "IT",
+    "TITLE": "Manager"
+  },
+  {
+    "EMPID": 14,
+    "NAME": "Splatchsplatch",
+    "SALARY": 90000,
+    "BONUS": 9500,
+    "CITY": "Chicago",
+    "JOINING_DATE": "2013-01-26 13:15:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Marketing",
+    "TITLE": "Director"
+  },
+  {
+    "EMPID": 15,
+    "NAME": "Wuggles",
+    "SALARY": 85000,
+    "BONUS": 8000,
+    "CITY": "Seattle",
+    "JOINING_DATE": "2018-07-22 15:30:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Finance",
+    "TITLE": "Manager"
+  },
+  {
+    "EMPID": 16,
+    "NAME": "Boingboing",
+    "SALARY": 70000,
+    "BONUS": 6000,
+    "CITY": "Miami",
+    "JOINING_DATE": "2020-04-11 16:45:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Sales",
+    "TITLE": "Lead"
+  },
+  {
+    "EMPID": 17,
+    "NAME": "Zipzoom",
+    "SALARY": 62000,
+    "BONUS": 5000,
+    "CITY": "Denver",
+    "JOINING_DATE": "2017-09-18 18:00:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Engineering",
+    "TITLE": "Associate"
+  },
+  {
+    "EMPID": 18,
+    "NAME": "Wooglewoogle",
+    "SALARY": 58000,
+    "BONUS": 3500,
+    "CITY": "Philadelphia",
+    "JOINING_DATE": "2019-12-24 08:20:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "IT",
+    "TITLE": "Analyst"
+  },
+  {
+    "EMPID": 19,
+    "NAME": "Flipflopglop",
+    "SALARY": 75000,
+    "BONUS": 7200,
+    "CITY": "Boston",
+    "JOINING_DATE": "2022-02-14 10:35:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Marketing",
+    "TITLE": "Lead"
+  },
+  {
+    "EMPID": 20,
+    "NAME": "Blipblop",
+    "SALARY": 68000,
+    "BONUS": 6500,
+    "CITY": "San Francisco",
+    "JOINING_DATE": "2021-08-29 11:50:00",
+    "ACTIVE_EMPLOYEE": 1,
+    "DEPARTMENT": "Finance",
+    "TITLE": "Executive"
+  }
+]

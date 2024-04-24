@@ -1,0 +1,58 @@
+[
+  {
+    "DEPT_ID": 1,
+    "DEPT_NAME": "Engineering",
+    "LOCATION": "New York",
+    "HEAD_COUNT": 125,
+    "BUDGET_ALLOCATION": 8500000,
+    "MANAGER_ID": 10
+  },
+  {
+    "DEPT_ID": 2,
+    "DEPT_NAME": "Sales",
+    "LOCATION": "Chicago",
+    "HEAD_COUNT": 80,
+    "BUDGET_ALLOCATION": 5200000,
+    "MANAGER_ID": 22
+  },
+  {
+    "DEPT_ID": 3,
+    "DEPT_NAME": "Marketing",
+    "LOCATION": "Los Angeles",
+    "HEAD_COUNT": 65,
+    "BUDGET_ALLOCATION": 4800000,
+    "MANAGER_ID": 35
+  },
+  {
+    "DEPT_ID": 4,
+    "DEPT_NAME": "Finance",
+    "LOCATION": "San Francisco",
+    "HEAD_COUNT": 50,
+    "BUDGET_ALLOCATION": 3700000,
+    "MANAGER_ID": 47
+  },
+  {
+    "DEPT_ID": 5,
+    "DEPT_NAME": "Human Resources",
+    "LOCATION": "Boston",
+    "HEAD_COUNT": 30,
+    "BUDGET_ALLOCATION": 2100000,
+    "MANAGER_ID": 59
+  },
+  {
+    "DEPT_ID": 6,
+    "DEPT_NAME": "IT",
+    "LOCATION": "Seattle",
+    "HEAD_COUNT": 70,
+    "BUDGET_ALLOCATION": 5000000,
+    "MANAGER_ID": 68
+  },
+  {
+    "DEPT_ID": 7,
+    "DEPT_NAME": "Operations",
+    "LOCATION": "Miami",
+    "HEAD_COUNT": 90,
+    "BUDGET_ALLOCATION": 6300000,
+    "MANAGER_ID": 81
+  }
+]

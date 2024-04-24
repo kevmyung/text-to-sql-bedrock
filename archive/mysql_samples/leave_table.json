@@ -1,0 +1,211 @@
+[
+  {
+    "LEAVE_ID": 1,
+    "EMPLOYEE_ID": 1,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-06-01",
+    "END_DATE": "2023-06-10",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 2,
+    "EMPLOYEE_ID": 1,
+    "LEAVE_TYPE": "Sick Leave",
+    "START_DATE": "2023-04-05",
+    "END_DATE": "2023-04-07",
+    "REASON": "Illness"
+  },
+  {
+    "LEAVE_ID": 3,
+    "EMPLOYEE_ID": 2,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-07-15",
+    "END_DATE": "2023-07-22",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 4,
+    "EMPLOYEE_ID": 3,
+    "LEAVE_TYPE": "Sick Leave",
+    "START_DATE": "2023-05-15",
+    "END_DATE": "2023-05-18",
+    "REASON": "Illness"
+  },
+  {
+    "LEAVE_ID": 5,
+    "EMPLOYEE_ID": 3,
+    "LEAVE_TYPE": "Bereavement Leave",
+    "START_DATE": "2023-03-10",
+    "END_DATE": "2023-03-14",
+    "REASON": "Family Emergency"
+  },
+  {
+    "LEAVE_ID": 6,
+    "EMPLOYEE_ID": 4,
+    "LEAVE_TYPE": "Maternity Leave",
+    "START_DATE": "2023-01-01",
+    "END_DATE": "2023-04-30",
+    "REASON": "Maternity"
+  },
+  {
+    "LEAVE_ID": 7,
+    "EMPLOYEE_ID": 5,
+    "LEAVE_TYPE": "Maternity Leave",
+    "START_DATE": "2023-07-01",
+    "END_DATE": "2023-10-31",
+    "REASON": "Maternity"
+  },
+  {
+    "LEAVE_ID": 8,
+    "EMPLOYEE_ID": 5,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-11-15",
+    "END_DATE": "2023-11-22",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 9,
+    "EMPLOYEE_ID": 6,
+    "LEAVE_TYPE": "Bereavement Leave",
+    "START_DATE": "2023-09-01",
+    "END_DATE": "2023-09-05",
+    "REASON": "Family Emergency"
+  },
+  {
+    "LEAVE_ID": 10,
+    "EMPLOYEE_ID": 7,
+    "LEAVE_TYPE": "Bereavement Leave",
+    "START_DATE": "2023-04-20",
+    "END_DATE": "2023-04-24",
+    "REASON": "Family Emergency"
+  },
+  {
+    "LEAVE_ID": 11,
+    "EMPLOYEE_ID": 7,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-12-20",
+    "END_DATE": "2024-01-03",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 12,
+    "EMPLOYEE_ID": 8,
+    "LEAVE_TYPE": "Sick Leave",
+    "START_DATE": "2023-02-01",
+    "END_DATE": "2023-02-03",
+    "REASON": "Illness"
+  },
+  {
+    "LEAVE_ID": 13,
+    "EMPLOYEE_ID": 9,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-08-01",
+    "END_DATE": "2023-08-15",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 14,
+    "EMPLOYEE_ID": 10,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-08-15",
+    "END_DATE": "2023-08-22",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 15,
+    "EMPLOYEE_ID": 10,
+    "LEAVE_TYPE": "Sick Leave",
+    "START_DATE": "2023-10-10",
+    "END_DATE": "2023-10-12",
+    "REASON": "Illness"
+  },
+  {
+    "LEAVE_ID": 16,
+    "EMPLOYEE_ID": 11,
+    "LEAVE_TYPE": "Maternity Leave",
+    "START_DATE": "2023-05-01",
+    "END_DATE": "2023-08-31",
+    "REASON": "Maternity"
+  },
+  {
+    "LEAVE_ID": 17,
+    "EMPLOYEE_ID": 12,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-06-15",
+    "END_DATE": "2023-06-22",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 18,
+    "EMPLOYEE_ID": 13,
+    "LEAVE_TYPE": "Sick Leave",
+    "START_DATE": "2023-03-20",
+    "END_DATE": "2023-03-24",
+    "REASON": "Illness"
+  },
+  {
+    "LEAVE_ID": 19,
+    "EMPLOYEE_ID": 14,
+    "LEAVE_TYPE": "Bereavement Leave",
+    "START_DATE": "2023-07-10",
+    "END_DATE": "2023-07-14",
+    "REASON": "Family Emergency"
+  },
+  {
+    "LEAVE_ID": 20,
+    "EMPLOYEE_ID": 15,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-09-01",
+    "END_DATE": "2023-09-15",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 21,
+    "EMPLOYEE_ID": 16,
+    "LEAVE_TYPE": "Sick Leave",
+    "START_DATE": "2023-11-01",
+    "END_DATE": "2023-11-04",
+    "REASON": "Illness"
+  },
+  {
+    "LEAVE_ID": 22,
+    "EMPLOYEE_ID": 17,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-07-01",
+    "END_DATE": "2023-07-14",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 23,
+    "EMPLOYEE_ID": 18,
+    "LEAVE_TYPE": "Maternity Leave",
+    "START_DATE": "2023-03-01",
+    "END_DATE": "2023-06-30",
+    "REASON": "Maternity"
+  },
+  {
+    "LEAVE_ID": 24,
+    "EMPLOYEE_ID": 19,
+    "LEAVE_TYPE": "Bereavement Leave",
+    "START_DATE": "2023-05-10",
+    "END_DATE": "2023-05-14",
+    "REASON": "Family Emergency"
+  },
+  {
+    "LEAVE_ID": 25,
+    "EMPLOYEE_ID": 20,
+    "LEAVE_TYPE": "Annual Leave",
+    "START_DATE": "2023-10-01",
+    "END_DATE": "2023-10-15",
+    "REASON": "Vacation"
+  },
+  {
+    "LEAVE_ID": 26,
+    "EMPLOYEE_ID": 21,
+    "LEAVE_TYPE": "Sick Leave",
+    "START_DATE": "2023-08-01",
+    "END_DATE": "2023-08-03",
+    "REASON": "Illness"
+  }
+]
+    
