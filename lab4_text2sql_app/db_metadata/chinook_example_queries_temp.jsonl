@@ -1,0 +1,10 @@
+{"input": "모든 아티스트의 ID와 이름 정보 조회. 신규 아티스트 데이터베이스 구축, 기존 아티스트 정보 검토 및 업데이트, 아티스트 관련 분석 또는 보고서 작성 등의 목적으로 활용 가능.", "query": "SELECT * FROM Artist"}
+{"input": "앨범 데이터에서 아티스트 이름이 'AC/DC'인 아티스트의 앨범 정보 조회. 아티스트 테이블에서 'AC/DC'라는 이름을 가진 아티스트의 ArtistId를 찾아 Album 테이블에서 해당 ArtistId와 연결된 모든 앨범 정보를 가져오는 요청.", "query": "SELECT * FROM Album WHERE ArtistId = (SELECT ArtistId FROM Artist WHERE Name = 'AC/DC')"}
+{"input": "모든 락 장르 음악 트랙 정보 요청. 락 장르에 속한 모든 트랙의 상세 정보가 필요할 때 사용할 수 있는 쿼리. 새 음반 제작을 위해 기존 락 장르 트랙들을 분석하거나, 락 장르 음원 서비스를 준비하는 등의 업무에 활용 가능.", "query": "SELECT * FROM Track WHERE GenreId = (SELECT GenreId FROM Genre WHERE Name = 'Rock')"}
+{"input": "전체 트랙의 총 재생시간 확인 요청. 음원 서비스 운영을 위해 전체 콘텐츠의 총 길이를 파악하여 스토리지 용량 산정 및 스트리밍 대역폭 예측에 활용할 수 있음.", "query": "SELECT SUM(Milliseconds) FROM Track"}
+{"input": "캐나다에 거주하는 고객 정보 조회. 국가별 고객 데이터 분석 및 마케팅 전략 수립을 위한 데이터 추출이 목적일 수 있습니다. 캐나다 시장 진출 계획 수립 시 현지 고객 기반을 파악하고 타겟 고객층을 정의하는 데 활용될 수 있습니다.", "query": "SELECT * FROM Customer WHERE Country = 'Canada'"}
+{"input": "앨범 ID가 5인 트랙 수 확인\n\n이 쿼리는 특정 앨범에 포함된 트랙의 총 개수를 파악하기 위한 목적으로 사용될 수 있습니다. 예를 들어 앨범별 트랙 수를 비교하거나, 앨범 제작 시 예상 재생 시간을 산출하는 데 활용할 수 있습니다. 또한 특정 앨범의 인기도나 판매량을 간접적으로 가늠하는 지표로 삼을 수도 있겠습니다.", "query": "SELECT COUNT(*) FROM Track WHERE AlbumId = 5"}
+{"input": "모든 송장 건수 확인. 회사의 총 거래 규모와 고객 수를 파악하기 위한 목적일 수 있습니다. 매출 추이 분석, 재고 관리, 영업 실적 평가 등 다양한 비즈니스 의사결정에 기초 데이터로 활용될 수 있습니다.", "query": "SELECT COUNT(*) FROM Invoice"}
+{"input": "5분 이상 재생 시간을 가진 모든 음악 트랙 정보 조회. 장시간 재생되는 트랙을 별도로 분류하거나 관리할 필요가 있을 수 있음. 예를 들어 긴 트랙은 스트리밍 서비스에서 데이터 요금 부담이 클 수 있으므로 사용자에게 미리 알려줄 필요가 있을 수 있음.", "query": "SELECT * FROM Track WHERE Milliseconds > 300000"}
+{"input": "고객별 총 구매액 상위 5명의 고객 ID와 총 구매액 조회\n\n상세 목적 및 동기:\n- 고객 구매 패턴 분석을 통해 주요 고객 파악 및 마케팅 전략 수립\n- 최상위 고객에 대한 특별 혜택 제공 또는 맞춤형 프로모션 진행\n- 고객 충성도 제고 및 재구매 유도를 위한 전략 수립\n- 매출 기여도가 높은 고객 관리 강화", "query": "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"}
+{"input": "전체 직원 수 확인. 인력 관리 및 인사 계획 수립을 위해 현재 고용된 직원의 총 인원 수를 파악할 필요가 있습니다.", "query": "SELECT COUNT(*) FROM Employee"}

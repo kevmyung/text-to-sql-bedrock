@@ -564,6 +564,128 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AdministratorAccess'
 
+  OpenSearchDomain:
+    Type: "AWS::OpenSearchService::Domain"
+    Properties:
+      DomainName: !Sub "chatbot-${AWS::StackName}"
+      EngineVersion: "OpenSearch_2.11"
+      ClusterConfig:
+        InstanceType: "r6g.large.search"
+        InstanceCount: 1
+        DedicatedMasterEnabled: false
+        ZoneAwarenessEnabled: false
+      EBSOptions:
+        EBSEnabled: true
+        VolumeType: "gp3"
+        VolumeSize: 100
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+      EncryptionAtRestOptions:
+        Enabled: true
+      AdvancedSecurityOptions:
+        Enabled: true
+        InternalUserDatabaseEnabled: true
+        MasterUserOptions:
+          MasterUserName: "raguser"
+          MasterUserPassword: "MarsEarth1!"
+      DomainEndpointOptions:
+        EnforceHTTPS: true
+        TLSSecurityPolicy: "Policy-Min-TLS-1-2-2019-07"
+      AccessPolicies:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: "*"
+            Action: "es:*"
+            Resource: "*"
+        
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [lambda.amazonaws.com]
+            Action: ["sts:AssumeRole"]
+      Policies:
+        - PolicyName: OpenSearchAndLogsAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "es:AssociatePackage"
+                  - "es:DescribePackages"
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+
+  OpenSearchNoriFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Timeout: 300
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+          import cfnresponse
+
+          def lambda_handler(event, context):
+              client = boto3.client('opensearch')
+              domain_name = f"chatbot-{os.environ['AWS_STACK_NAME']}"
+              try:
+                  if event['RequestType'] == 'Delete':
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  elif event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+                      response = client.associate_package(
+                          PackageID='G79602591',  # Nori plugin Package ID for us-west-2 and version 2.11
+                          DomainName=domain_name
+                      )
+                      filtered_response = {
+                          key: value for key, value in response.items() if key in ['Status', 'PackageID']
+                      }
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Data': filtered_response})
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'Message': str(e)})
+      Runtime: python3.11
+      Environment:
+        Variables:
+          AWS_STACK_NAME: !Ref "AWS::StackName"
+
+  OpenSearchPackageAssociation:
+    Type: Custom::OpenSearchNoriPlugin
+    Properties:
+      ServiceToken: !GetAtt OpenSearchNoriFunction.Arn
+      DomainName: !Ref OpenSearchDomain
+    DependsOn: OpenSearchDomain
+
+  OpenSearchDomainEndpointParameter:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: "chatbot-opensearch_domain_endpoint"
+      Type: "String"
+      Value: !GetAtt OpenSearchDomain.DomainEndpoint
+
+  OpenSearchUserIDParameter:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: "chatbot-opensearch_user_id"
+      Type: "String"
+      Value: "raguser"
+
+  OpenSearchUserPasswordParameter:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: "chatbot-opensearch_user_password"
+      Type: "String"
+      Value: "MarsEarth1!"
+
   StudioDomain:
     Type: AWS::SageMaker::Domain
     Properties:
@@ -602,3 +724,19 @@ Outputs:
   SageMakerExecutionRoleArn:
     Description: SageMaker Execution Role ARN
     Value: !GetAtt SageMakerExecutionRole.Arn
+
+  DomainEndpoint:
+    Description: "Endpoint for the OpenSearch domain."
+    Value: !Sub "https://${OpenSearchDomain.DomainEndpoint}"
+
+  DashboardURL:
+    Description: "URL to access the OpenSearch Dashboards."
+    Value: !Sub "https://${OpenSearchDomain.DomainEndpoint}:443/app/opensearch_dashboards"
+
+  UserID:
+    Description: "User ID for OpenSearch domain."
+    Value: "raguser"
+
+  UserPassword:
+    Description: "Password for OpenSearch domain."
+    Value: "MarsEarth1!"

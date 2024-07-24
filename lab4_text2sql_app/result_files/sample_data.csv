@@ -1,0 +1,65 @@
+Country,Month,TotalSales
+Argentina,2022-06,1.98
+Argentina,2022-09,3.96
+Argentina,2022-12,5.94
+Australia,2022-05,0.99
+Austria,2022-01,18.86
+Austria,2022-09,8.91
+Brazil,2022-03,3.98
+Brazil,2022-06,12.870000000000001
+Brazil,2022-07,0.99
+Brazil,2022-09,5.94
+Brazil,2022-11,3.96
+Brazil,2022-12,13.86
+Canada,2022-02,5.94
+Canada,2022-03,13.89
+Canada,2022-04,13.86
+Canada,2022-05,8.91
+Canada,2022-08,1.98
+Canada,2022-10,4.949999999999999
+Canada,2022-11,17.82
+Canada,2022-12,8.91
+Chile,2022-01,17.91
+Czech Republic,2022-03,3.96
+Czech Republic,2022-06,5.94
+Denmark,2022-03,5.94
+Denmark,2022-11,0.99
+France,2022-01,1.98
+France,2022-04,7.92
+France,2022-05,13.86
+France,2022-07,9.9
+France,2022-10,5.94
+Germany,2022-02,8.91
+Germany,2022-03,0.99
+Germany,2022-07,1.98
+Germany,2022-08,13.86
+Hungary,2022-01,1.98
+Hungary,2022-02,21.86
+Hungary,2022-10,8.91
+India,2022-02,1.99
+India,2022-06,1.98
+India,2022-07,13.86
+Italy,2022-01,3.96
+Italy,2022-04,5.94
+Italy,2022-12,0.99
+Netherlands,2022-12,1.98
+Poland,2022-07,8.91
+Portugal,2022-06,0.99
+Portugal,2022-07,1.98
+Portugal,2022-10,3.96
+Spain,2022-12,1.98
+Sweden,2022-01,6.94
+Sweden,2022-08,0.99
+USA,2022-01,0.99
+USA,2022-02,7.92
+USA,2022-03,15.86
+USA,2022-04,0.99
+USA,2022-05,13.86
+USA,2022-06,13.86
+USA,2022-08,20.79
+USA,2022-09,13.86
+USA,2022-11,14.850000000000001
+United Kingdom,2022-04,8.91
+United Kingdom,2022-09,3.96
+United Kingdom,2022-10,13.86
+United Kingdom,2022-12,3.96

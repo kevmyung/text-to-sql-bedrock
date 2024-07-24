@@ -1,23 +1,47 @@
-# Text-to-SQL 개요
+# Text-to-SQL Bedrock
 
-엔터프라이즈 데이터 웨어하우스는 지난 20년 동안 모든 산업 분야의 기업들이 가장 큰 기술 투자를 한 대상 중 하나입니다. 생성 AI가 새로운 콘텐츠를 만들어내고 비정형 형식의 대규모 정보 코퍼스를 이해하는 데 많은 가능성을 보여주었지만, 조직이 데이터를 유용하게 만들기 위해 투자한 데이터 소스를 소비하는 방식은 어떻게 개선될 수 있을까요? 이러한 데이터 소스는 조직 내에서 가장 신뢰할 수 있는 것들 중 하나이며, 많은 경우 최고 경영진의 의사결정을 주도합니다.
+This repository contains multiple labs focused on implementing Text-to-SQL using various tools and techniques. Below are the details for each lab included in this repository.
 
-1970년대에 처음 소개된 이후 Structure Query Language(SQL)는 데이터베이스와 상호작용하는 가장 일반적인 언어였지만, 여전히 데이터를 이해하려면 집합 이론, 데이터 유형 및 외래 키 관계에 대한 깊은 이해가 필요합니다. 생성 AI는 자연어 질문을 유효한 SQL 쿼리로 변환함으로써 이러한 지식 및 기술 격차를 해소할 수 있는 방법을 제공합니다.
+## Lab 1: Text-to-SQL with S3 and Athena
 
-### Personas
-이러한 데이터베이스 접근 패턴의 혜택을 받을 수 있는 시스템과 사람들에는 고객 서비스 직원, 콜센터 상담원과 같이 관계형 데이터 소스를 자신의 프로세스에 통합하려는 비기술 인력이 포함됩니다. 또한 기술적인 용도로는 Extract-Transform-Load 파이프라인, 관계형 데이터베이스를 통합하는 기존의 Retrieval Augmented Generation(RAG) 아키텍처, 그리고 합리적으로 단독으로 탐색하기에는 너무 큰 데이터 플랫폼을 다루는 조직 등이 있습니다.
+In this lab, you'll learn how to set up and use Amazon S3 and Athena to query data using SQL.
 
-### The Problem
-자연어에서 정확한 SQL 쿼리를 만드는 가장 어려운 부분은 SQL 언어를 처음 배울 때 우리가 어려움을 겪었던 것과 같습니다. 외래 키 관계 식별, 질문을 더 작은 중첩 쿼리로 분해, 테이블 적절히 조인하기 등의 개념이 SQL 쿼리 생성에서 가장 어려운 부분입니다. 연구진에 따르면 SQL 생성 테스트의 50% 이상이 스키마 링크와 조인에서 실패합니다.
+### Files
+- `lab1_text2sql_s3_athena/`
+  - `1.basic-athena.ipynb`: Jupyter notebook to set up ㅅㄷ S3 and Athena.
+  - `2.advanced-athena.ipynb`: Jupyter notebook to run SQL queries on data stored in S3 using Athena.
 
-쿼리의 이러한 핵심 구성 요소 외에도 각 데이터베이스 엔진마다 유효한 쿼리를 작성하기 위해 마스터링해야 하는 고유한 구문이 있습니다. 또한 많은 조직에서는 중복되는 데이터 속성이 많이 있어서 - 예를 들어 한 테이블에서는 값이 집계되고 다른 테이블에서는 집계되지 않는 경우 - 올바르게 사용하려면 부족 지식이 필요합니다.
+## Lab 2: Text-to-SQL Implementation
 
-### 성공의 측정
-그렇다면 우리는 이 문제를 해결하기 위해 얼마나 가까이 다가갔을까요? 커뮤니티는 라벨이 지정된 데이터 세트로 가장 성공적인 접근 방식을 랭킹하는 두 가지 주요 리더보드에 합의했습니다: [Spider](https://yale-lily.github.io/spider)와 [BIRD](https://bird-bench.github.io/) 두 리더보드 모두 이 문제를 해결하는 어떤 접근 방식의 정확성을 측정하는 가장 중요한 지표인 실행 정확도(EX)를 중시합니다. 이 지표는 단순히 생성된 SQL 쿼리와 레이블이 지정된 SQL 쿼리를 비교하여 일치 여부를 결정합니다. 또한 SPIDER는 정확한 집합 일치 정확도(EM) - 쿼리 작성 방식에 관계없이 반환된 결과 집합이 실제로 질문에 답변했는지 여부를 측정하며, BIRD는 유효 효율성 점수(VES)를 제공하여 생성된 SQL 쿼리의 성능을 측정합니다. 각 벤치마크 데이터 세트에 대한 자세한 내용은 해당 페이지를 참조하세요.
+This lab focuses on implementing Text-to-SQL functionality with different approaches.
 
-Spider와 BIRD 데이터셋은 Text-to-SQL 기술을 벤치마킹하고 모델을 미세 조정하는 데 권위 있고 견고한 데이터셋으로 입증되었습니다. 이 모듈 전체에서 우리는 Text-to-SQL에 대한 가장 강력한 접근 방식을 보여주기 위해 이러한 데이터셋과 해당 리더보드를 참조할 것입니다.
+### Files
+- `lab2_text2sql_implementation/`
+  - `1.chain_agent_sample.ipynb`: Sample notebook demonstrating chain & agent.
+  - `2.function_calling_sample.ipynb`: Sample notebook demonstrating function calling.
 
-### State of the Art
-BIRD 리더보드에 따르면 Text-to-SQL 문제에 대한 최신 기술 수준은 60% 실행 정확도입니다. 이는 여전히 인간 수준에 미치지 못하지만, 1년 만에 기본 T5 모델의 성능이 7% EM에서 60%를 넘어섰다는 점에 주목할 필요가 있습니다. 이러한 모델과 기술에 대한 연구가 계속되면서 앞으로 1년 동안 더욱 발전할 것으로 기대됩니다.
+## Lab 3: Text-to-SQL Schema Preparation
 
-이러한 기술은 올바른 SQL 쿼리 생성이라는 단일 목적에 최적화되어 있다는 점을 염두에 두어야 합니다. 이러한 리더보드는 가장 중요한 것 중 하나인 속도와 같은 중요한 측면을 평가하지 않습니다. 이 기술 중 많은 것들이 종단 간 프롬프트 체인 속도가 몇 초가 넘는 것으로 나타났
+This lab involves preparing the schema documents for Text-to-SQL applications.
+
+### Files
+- `lab3_text2sql_schema_preparation/`
+  - `1.sample_queries.ipynb`: Jupyter notebook for preparing the sample query documents.
+  - `2.detailed_schema.ipynb`: Jupyter notebook for preparing the detailed schema documents.
+
+## Lab 4: Text-to-SQL Application
+
+In this lab, you will create a Text-to-SQL application.
+
+### Files
+- `lab4_text2sql_app/`
+  - `1.setup-streamlit.ipynb`: Jupyter notebook for developing the Text-to-SQL application.
+  - `demo-app.py` : Sample Application (main)
+  - `src/...` : Custom libraries for Text2SQL app.
+
+
+## Setup Instructions
+
+Refer to `SETUP.md` for instructions on how to set up the environment and dependencies for running the labs.
+- `cloudformation/`: Directory containing CloudFormation templates for setting up resources.
+
