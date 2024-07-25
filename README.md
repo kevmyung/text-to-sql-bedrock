@@ -8,7 +8,7 @@ In this lab, you'll learn how to set up and use Amazon S3 and Athena to query da
 
 ### Files
 - `lab1_text2sql_s3_athena/`
-  - `1.basic-athena.ipynb`: Jupyter notebook to set up ㅅㄷ S3 and Athena.
+  - `1.basic-athena.ipynb`: Jupyter notebook to set up the S3 and Athena.
   - `2.advanced-athena.ipynb`: Jupyter notebook to run SQL queries on data stored in S3 using Athena.
 
 ## Lab 2: Text-to-SQL Implementation
