@@ -13,7 +13,7 @@ from .ssm import parameter_store
 
 class OpenSearchClient:
     def __init__(self, emb, index_name, mapping_name, vector, text, output):
-        pm = parameter_store('us-east-1')
+        pm = parameter_store('us-west-2')
         config = self.load_opensearch_config()
         self.index_name = index_name
         self.emb = emb
