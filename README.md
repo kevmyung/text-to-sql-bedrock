@@ -2,27 +2,11 @@
 
 This repository contains multiple labs focused on implementing Text-to-SQL using various tools and techniques. Below are the details for each lab included in this repository.
 
-## Lab 1: Text-to-SQL with S3 and Athena
+## Lab 1: Text-to-SQL Implementation (Prompt Engineering & RAG & Tool Use)
 
-In this lab, you'll learn how to set up and use Amazon S3 and Athena to query data using SQL.
-
-### Files
-- `lab1_text2sql_s3_athena/`
-  - `1.basic-athena.ipynb`: Jupyter notebook to set up the S3 and Athena.
-  - `2.advanced-athena.ipynb`: Jupyter notebook to run SQL queries on data stored in S3 using Athena.
-
-## Lab 2: Text-to-SQL Implementation (Chain & Agent & Function Calling)
+## Lab 2: Text-to-SQL Schema Preparation
 
 This lab focuses on implementing Text-to-SQL functionality with different approaches.
-
-### Files
-- `lab2_text2sql_implementation/`
-  - `1.chain_agent_sample.ipynb`: Sample notebook demonstrating chain & agent.
-  - `2.function_calling_sample.ipynb`: Sample notebook demonstrating function calling.
-
-## Lab 3: Text-to-SQL Schema Preparation
-
-This lab involves preparing the schema documents for Text-to-SQL applications.
 
 ![schema_prep](./images/text2sql/schema-prep-1.png)
 

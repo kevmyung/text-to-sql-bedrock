@@ -12,7 +12,6 @@ mappings-sql:
           type: date
     input:
       type: text
-      analyzer: nori
     query:      
       type: keyword
     input_v:
@@ -32,7 +31,6 @@ mappings-schema:
       type: keyword
     table_desc:
       type: text
-      analyzer: nori
     columns:      
       type: nested
       properties:
@@ -40,7 +38,6 @@ mappings-schema:
           type: keyword
         col_desc:
           type: text
-          analyzer: nori
 
 mappings-detailed-schema:
   properties:
@@ -48,7 +45,6 @@ mappings-detailed-schema:
       type: keyword
     table_desc:
       type: text
-      analyzer: nori
     columns:      
       type: nested
       properties:
@@ -56,10 +52,8 @@ mappings-detailed-schema:
           type: keyword
         col_desc:
           type: text
-          analyzer: nori
     table_summary:
       type: text
-      analyzer: nori
     table_summary_v:
       type: knn_vector
       dimension: 1024

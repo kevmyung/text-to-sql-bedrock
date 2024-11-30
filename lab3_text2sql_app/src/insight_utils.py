@@ -136,7 +136,7 @@ def render_sidebar() -> Tuple[Dict, Dict, Dict]:
     global lang_config
     language = st.sidebar.selectbox(
         'Language 🌎',
-        ['Korean', 'English'],
+        ['English', 'Korean'],
         key='language_select_insight',
         on_change=handle_language_change
     )

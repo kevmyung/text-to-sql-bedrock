@@ -1,25 +1,23 @@
 import os
 import json
 import yaml
-from copy import deepcopy
-from typing import List, Optional, Dict, Tuple
+import boto3
 import streamlit as st
 from opensearchpy import OpenSearch, RequestsHttpConnection
-from langchain.schema import BaseRetriever, Document
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_community.vectorstores import OpenSearchVectorSearch
 from .common_utils import sample_query_indexing, schema_desc_indexing
 from .ssm import parameter_store
+from collections import namedtuple
+
+Document = namedtuple('Document', ['page_content', 'metadata'])
 
 class OpenSearchClient:
-    def __init__(self, emb, index_name, mapping_name, vector, text, output):
-        pm = parameter_store('us-west-2')
+    def __init__(self, region_name, index_name, mapping_name, vector, text, output):
+        pm = parameter_store(region_name)
         config = self.load_opensearch_config()
         self.index_name = index_name
-        self.emb = emb
         self.config = config
-        self.endpoint = pm.get_params(key="chatbot-opensearch_domain_endpoint", enc=False)
-        #self.endpoint = f"{domain_endpoint}"
+        domain_endpoint = pm.get_params(key="chatbot-opensearch_domain_endpoint", enc=False)
+        self.endpoint = f"https://{domain_endpoint}"
         self.http_auth = (pm.get_params(key="chatbot-opensearch_user_id", enc=False), pm.get_params(key="chatbot-opensearch_user_password", enc=True))
         self.vector = vector
         self.text = text
@@ -32,12 +30,6 @@ class OpenSearchClient:
             verify_certs=True,
             connection_class=RequestsHttpConnection
         ) 
-        self.vector_store = OpenSearchVectorSearch(
-            index_name=self.index_name,
-            opensearch_url=self.endpoint,
-            embedding_function=self.emb,
-            http_auth=self.http_auth,
-        )
         
     def load_opensearch_config(self):
         file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -56,210 +48,54 @@ class OpenSearchClient:
         if self.is_index_present():
             self.conn.indices.delete(self.index_name)
 
-class OpenSearchHybridRetriever(BaseRetriever):
-    os_client: OpenSearchClient
-    k: int = 5
-    verbose: bool = True
-    filter: List[dict] = []
 
-    def __init__(self, os_client: OpenSearchClient, k):
-        super().__init__(os_client=os_client)
+class OpenSearchVectorRetriever:
+    def __init__(self, os_client, region_name, k=5):
+        self.emb_model = "amazon.titan-embed-text-v2:0"
         self.os_client = os_client
+        self.region = region_name 
         self.k = k
-    
-    def _get_relevant_documents(self, query: str, *, ensemble: List, run_manager: CallbackManagerForRetrieverRun) -> List[Document]:
-        os_client = self.os_client
-        search_result = retriever_utils.search_hybrid(
-            query=query,
-            k=self.k,
-            filter=self.filter,
-            index_name=os_client.index_name,
-            os_conn=os_client.conn,
-            emb=os_client.emb,
-            ensemble_weights=ensemble,
-            vector_field=os_client.vector,
-            text_field=os_client.text,
-            output_field=os_client.output
-        )
-        return search_result
 
-class retriever_utils():
+    def _embedding(self, input_text):
+        boto3_client = boto3.client("bedrock-runtime", region_name=self.region)
+        response = boto3_client.invoke_model(
+                modelId=self.emb_model,
+                body=json.dumps({"inputText": input_text})
+            )
 
-    @classmethod 
-    def normalize_search_results(cls, search_results):
-        hits = (search_results["hits"]["hits"])
-        max_score = float(search_results["hits"]["max_score"])
-        for hit in hits:
-            hit["_score"] = float(hit["_score"]) / max_score
-        search_results["hits"]["max_score"] = hits[0]["_score"]
-        search_results["hits"]["hits"] = hits
-        return search_results
-    
-    @classmethod 
-    def search_semantic(cls, **kwargs):
+        return json.loads(response['body'].read())['embedding']
+
+    def vector_search(self, input_text):
+        embedding = self._embedding(input_text)
         semantic_query = {
             "query": {
                 "bool": {
                     "must": [
                         {
                             "knn": {
-                                kwargs["vector_field"]: {
-                                    "vector": kwargs["emb"].embed_query(kwargs["query"]),
-                                    "k": kwargs["k"],
+                                self.os_client.vector: {
+                                    "vector": embedding,
+                                    "k": self.k,
                                 }
                             }
                         },
-                    ],
-                    "filter": kwargs.get("boolean_filter", []),
+                    ]
                 }
             },
-            "size": kwargs["k"],
-            #"min_score": 0.3
-        }
-        # get semantic search results
-        search_results = lookup_opensearch_document(
-            index_name=kwargs["index_name"],
-            os_conn=kwargs["os_conn"],
-            query=semantic_query,
-        )
-
-        results = []
-        if search_results.get("hits", {}).get("hits", []):
-            # normalize the scores
-            search_results = cls.normalize_search_results(search_results)
-            for res in search_results["hits"]["hits"]:
-                if "metadata" in res["_source"]:
-                    metadata = res["_source"]["metadata"]
-                else:
-                    metadata = {}
-                metadata["id"] = res["_id"]
-
-                # extract the text contents
-                page_content = json.dumps({field: res["_source"].get(field, "") for field in kwargs["output_field"]})
-                doc = Document(
-                    page_content=page_content,
-                    metadata=metadata
-                )
-                results.append((doc, res["_score"]))
-        return results
-
-    @classmethod
-    def search_lexical(cls, **kwargs):
-        lexical_query = {
-            "query": {
-                "bool": {
-                    "must": [
-                        {
-                            "match": {
-                                kwargs["text_field"]: {
-                                    "query": kwargs["query"],
-                                    "operator": "or",
-                                }
-                            }
-                        },
-                    ],
-                    "filter": kwargs["filter"]
-                }
-            },
-            "size": kwargs["k"] 
+            "size": self.k
         }
 
-        # get lexical search results
-        search_results = lookup_opensearch_document(
-            index_name=kwargs["index_name"],
-            os_conn=kwargs["os_conn"],
-            query=lexical_query,
-        )
+        result = self.os_client.conn.search(index=self.os_client.index_name, body=semantic_query)
 
-        results = []
-        if search_results.get("hits", {}).get("hits", []):
-            # normalize the scores
-            search_results = cls.normalize_search_results(search_results)
-            for res in search_results["hits"]["hits"]:
-                if "metadata" in res["_source"]:
-                    metadata = res["_source"]["metadata"]
-                else:
-                    metadata = {}
-                metadata["id"] = res["_id"]
+        documents = []
+        for hit in result['hits']['hits']:
+            source = hit['_source']
+            page_content = {k: source[k] for k in self.os_client.output if k in source}
+            documents.append(Document(page_content=json.dumps(page_content), metadata={}))
 
-                # extract the text contents
-                page_content = json.dumps({field: res["_source"].get(field, "") for field in kwargs["output_field"]})
-                doc = Document(
-                    page_content=page_content,
-                    metadata=metadata
-                )
-                results.append((doc, res["_score"]))
-        return results
-
-    @classmethod
-    def search_hybrid(cls, **kwargs):
-
-        assert "query" in kwargs, "Check your query"
-        assert "emb" in kwargs, "Check your emb"
-        assert "index_name" in kwargs, "Check your index_name"
-        assert "os_conn" in kwargs, "Check your OpenSearch Connection"
-
-        search_filter = deepcopy(kwargs.get("filter", []))
-        similar_docs_semantic = cls.search_semantic(
-                index_name=kwargs["index_name"],
-                os_conn=kwargs["os_conn"],
-                emb=kwargs["emb"],
-                query=kwargs["query"],
-                k=kwargs.get("k", 5),
-                vector_field=kwargs["vector_field"],
-                output_field=kwargs["output_field"],
-                boolean_filter=search_filter,
-            )
-        # print("semantic_docs:", similar_docs_semantic)
-
-        similar_docs_lexical = cls.search_lexical(
-                index_name=kwargs["index_name"],
-                os_conn=kwargs["os_conn"],
-                query=kwargs["query"],
-                k=kwargs.get("k", 5),
-                text_field=kwargs["text_field"],
-                output_field=kwargs["output_field"],
-                minimum_should_match=kwargs.get("minimum_should_match", 1),
-                filter=search_filter,
-            )
-        # print("lexical_docs:", similar_docs_lexical)
-
-        similar_docs = retriever_utils.get_ensemble_results(
-            doc_lists=[similar_docs_semantic, similar_docs_lexical],
-            weights=kwargs.get("ensemble_weights", [.51, .49]),
-            k=kwargs.get("k", 5),
-        )
-        
-        return similar_docs        
-
-
-    @classmethod
-    def get_ensemble_results(cls, doc_lists: List[List[Tuple[Document, float]]], weights: List[float], k: int = 5) -> List[Document]:
-        hybrid_score_dic: Dict[str, float] = {}
-        doc_map: Dict[str, Document] = {}
-        
-        # Weight-based adjustment
-        for doc_list, weight in zip(doc_lists, weights):
-            for doc, score in doc_list:
-                doc_id = doc.metadata.get("id", doc.page_content)
-                if doc_id not in hybrid_score_dic:
-                    hybrid_score_dic[doc_id] = 0.0
-                hybrid_score_dic[doc_id] += score * weight
-                doc_map[doc_id] = doc
-
-        sorted_docs = sorted(hybrid_score_dic.items(), key=lambda x: x[1], reverse=True)
-        return [doc_map[doc_id] for doc_id, _ in sorted_docs[:k]]
-
-
-
-def lookup_opensearch_document(index_name, os_conn, query):
-    response = os_conn.search(
-        index=index_name,
-        body=query
-    )
-    return response
-
-def initialize_os_client(enable_flag: bool, client_params: Dict, indexing_function, lang_config: Dict):
+        return documents
+    
+def initialize_os_client(enable_flag, client_params, indexing_function, lang_config):
     if enable_flag:
         client = OpenSearchClient(**client_params)
         indexing_function(client, lang_config)
@@ -267,13 +103,13 @@ def initialize_os_client(enable_flag: bool, client_params: Dict, indexing_functi
         client = ""
     return client
 
-def init_opensearch(emb_model, lang_config):
+def init_opensearch(region_name, lang_config):
     with st.sidebar:
         enable_rag_query = st.sidebar.checkbox(lang_config['rag_query'], value=True, disabled=True)
         sql_os_client = initialize_os_client(
             enable_rag_query,
             {
-                "emb": emb_model,
+                "region_name": region_name,
                 "index_name": 'example_queries',
                 "mapping_name": 'mappings-sql',
                 "vector": "input_v",
@@ -288,7 +124,7 @@ def init_opensearch(emb_model, lang_config):
         schema_os_client = initialize_os_client(
             enable_schema_desc,
             {
-                "emb": emb_model,
+                "region_name": region_name,
                 "index_name": 'schema_descriptions',
                 "mapping_name": 'mappings-detailed-schema',
                 "vector": "table_summary_v",

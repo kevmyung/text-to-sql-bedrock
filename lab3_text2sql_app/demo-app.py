@@ -1,10 +1,10 @@
 import streamlit as st
-import os
+import boto3
 from typing import Dict, Tuple, List, Union
 from src.db_utils import DB_Tool_Client
 from src.insight_utils import analyze_main
 from src.common_utils import load_model_config, load_language_config, display_chat_messages, update_tokens_and_costs, calculate_and_display_costs, ToolStreamHandler
-from src.models import ChatModel, calculate_cost_from_tokens
+from src.models import calculate_cost_from_tokens
 from src.opensearch import init_opensearch
 
 
@@ -69,7 +69,7 @@ def render_sidebar() -> Tuple[Dict, Dict, Dict]:
     global lang_config
     language = st.sidebar.selectbox(
         'Language 🌎',
-        ['Korean', 'English'],
+        ['English', 'Korean'],
         key='language_select',
         on_change=handle_language_change
     )
@@ -90,21 +90,18 @@ def render_sidebar() -> Tuple[Dict, Dict, Dict]:
         key='bedrock_region',
     )
 
-    model_kwargs = {
-        "temperature": 0.0,
-        "top_p": 1.0,
-        "top_k": 200,
-        "max_tokens": 20480
-    }
-
     database_config = database_setting()
 
-    return model_info, model_kwargs, database_config
+    return model_info, database_config
 
 def main() -> None:
-    model_info, model_kwargs, database_config = render_sidebar()
-    chat_model = ChatModel(model_info, model_kwargs)
-    sql_os_client, schema_os_client = init_opensearch(chat_model.emb, lang_config)
+    model_info, database_config = render_sidebar()
+    #chat_model = ChatModel(model_info, model_kwargs)
+
+    if "region" not in st.session_state:
+        st.session_state.region = boto3.Session().region_name
+
+    sql_os_client, schema_os_client = init_opensearch(st.session_state.region, lang_config)
 
     if "messages" not in st.session_state:
         st.session_state.messages = [INIT_MESSAGE]

@@ -8,18 +8,15 @@ import json
 import logging
 import os
 import re
-import warnings
 import streamlit as st
 from datetime import datetime
 from sqlalchemy import create_engine
-from sqlalchemy.exc import SAWarning
 from typing import List, Dict
 
 from langchain_community.utilities import SQLDatabase
 from .common_utils import parse_json_format, stream_converse_messages
-from .opensearch import OpenSearchHybridRetriever, OpenSearchClient
+from .opensearch import OpenSearchVectorRetriever, OpenSearchClient
 from .prompts import (
-    get_sql_prompt, 
     get_table_selection_prompt, 
     get_query_generation_prompt, 
     get_prompt_refinement_prompt, 
@@ -99,11 +96,18 @@ class DB_Tools:
             except json.JSONDecodeError:
                 st.text("Invalid page_content format")  
 
+ 
     def get_sample_queries(self): 
-        sql_os_retriever = OpenSearchHybridRetriever(self.sql_os_client, 10)
-        samples = sql_os_retriever.invoke(self.prompt, ensemble=[0.40, 0.60])
-        page_contents = [doc.page_content for doc in samples if doc is not None]
+        sql_os_retriever = OpenSearchVectorRetriever(
+            self.sql_os_client, 
+            self.region, 
+            k=10
+        )
+        samples = sql_os_retriever.vector_search(self.prompt, self.sql_os_client.index_name)
+        page_contents = [doc.page_content for doc in samples]
+
         sample_inputs = [json.loads(content)['input'] for content in page_contents]
+        print(sample_inputs)
 
         sys_prompt, usr_prompt = get_sample_selection_prompt(sample_inputs, self.prompt)
         response = self.boto3_client.converse(modelId=self.model, messages=usr_prompt, system=sys_prompt)
@@ -120,30 +124,34 @@ class DB_Tools:
             return []
 
     def get_table_summaries_by_similarities(self):
-        sql_os_retriever = OpenSearchHybridRetriever(self.schema_os_client, 5)
-        matched_tables = sql_os_retriever.invoke(self.prompt, ensemble = [0.40, 0.60])
+        schema_os_retriever = OpenSearchVectorRetriever(
+            self.schema_os_client, 
+            self.region, 
+            k=5
+        )
+        matched_tables = schema_os_retriever.vector_search(self.prompt, self.schema_os_client.index_name)
+
         serializable_tables = []
         for document in matched_tables:
             table_data = json.loads(document.page_content)
             serializable_tables.append(table_data)
-        
+
         return json.dumps(serializable_tables, ensure_ascii=False)
 
     def get_table_summaries_all(self):
-        query = {
-            "_source": ["table_name", "table_summary"],
-            "size": 1000,
-            "query": {
-                "match_all": {}
-            }
-        }
-        response = self.schema_os_client.conn.search(index=self.schema_os_client.index_name, body=query)
+        schema_os_retriever = OpenSearchVectorRetriever(
+            self.schema_os_client, 
+            self.region
+        )
+        documents = schema_os_retriever.get_all_documents(self.schema_os_client.index_name)
+
         table_descriptions = {}
-        for hit in response['hits']['hits']:
-            source = hit['_source']
-            table_name = source['table_name']
-            table_desc = source['table_summary']
+        for doc in documents:
+            content = json.loads(doc.page_content)
+            table_name = content['table_name']
+            table_desc = content['table_summary']
             table_descriptions[table_name] = table_desc
+
         return table_descriptions
 
     def get_column_description(self, table_name: str) -> Dict[str, str]:
@@ -284,11 +292,8 @@ class DB_Tools:
         retry_hint: {search_result}
         """.format(failure_log=self.tool_state["failure_log"], failed_query=self.tool_state["failed_query"], search_result=self.tool_state["search_result"])
 
-        # Get Table Summaries
-        if len(table_names) >= 10:
-            table_summaries = self.get_table_summaries_by_similarities() # RAG
-        else:
-            table_summaries = self.get_table_summaries_all()
+
+        table_summaries = self.get_table_summaries_by_similarities() # RAG    
 
         # Table Selection
         sys_prompt, usr_prompt = get_table_selection_prompt(table_summaries, self.prompt, self.samples, combined_log)

@@ -3,48 +3,116 @@ Description: >
   This CloudFormation template configures SageMaker Studio with minimal VPC requirements and public internet access for non-EFS traffic.
 
 Resources:
-  VPC:
-    Type: AWS::EC2::VPC
+  LambdaHelper:
+    Type: AWS::Lambda::Function
     Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import cfnresponse
+          import logging
+          import traceback
 
-  PublicSubnet:
-    Type: AWS::EC2::Subnet
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          ec2 = boto3.client('ec2')
+          sagemaker = boto3.client('sagemaker')
+
+          def lambda_handler(event, context):     
+            try:         
+              if event['RequestType'] == 'Create':
+                  vpc_id = get_default_vpc_id()
+                  subnets = get_subnets_for_vpc(vpc_id)
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {'VpcId': vpc_id , "Subnets" : subnets}, '')
+              elif event['RequestType'] == 'Delete':
+                  cleanup_sagemaker_resources(event['ResourceProperties'])
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, '')
+              else:
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, '')
+            except Exception as e:
+              logger.exception(f"Lambda function failed: {str(e)}")
+              cfnresponse.send(event, context, cfnresponse.FAILED, {"Error": str(e)})
+
+          def get_default_vpc_id():
+              vpcs = ec2.describe_vpcs(Filters=[{'Name': 'is-default', 'Values': ['true']}])
+              vpcs = vpcs['Vpcs']
+              vpc_id = vpcs[0]['VpcId']
+              return vpc_id
+
+          def get_subnets_for_vpc(vpcId):
+              response = ec2.describe_subnets(
+                  Filters=[
+                      {
+                          'Name': 'vpc-id',
+                          'Values': [vpcId]
+                      }
+                  ]
+              )
+              subnet_ids = []
+              for subnet in response['Subnets']:
+                  subnet_ids.append(subnet['SubnetId'])
+              return subnet_ids 
+
+          def cleanup_sagemaker_resources(properties):
+              domain_id = properties.get('DomainId')
+              user_profile_name = properties.get('UserProfileName')
+
+              if domain_id:
+                  # Delete Spaces
+                  spaces = sagemaker.list_spaces(DomainId=domain_id)
+                  for space in spaces['Spaces']:
+                      print(f"Deleting space: {space['SpaceName']}")
+                      sagemaker.delete_space(DomainId=domain_id, SpaceName=space['SpaceName'])
+                      waiter = sagemaker.get_waiter('space_deleted')
+                      waiter.wait(DomainId=domain_id, SpaceName=space['SpaceName'])
+
+                  # Delete UserProfile
+                  if user_profile_name:
+                      print(f"Deleting user profile: {user_profile_name}")
+                      sagemaker.delete_user_profile(DomainId=domain_id, UserProfileName=user_profile_name)
+                      waiter = sagemaker.get_waiter('user_profile_deleted')
+                      waiter.wait(DomainId=domain_id, UserProfileName=user_profile_name)
+
+                  # Delete Domain
+                  print(f"Deleting domain: {domain_id}")
+                  sagemaker.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': 'Delete'})
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.12
+      Timeout: 900
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
     Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: !Select [0, !GetAZs '']
-      MapPublicIpOnLaunch: true
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EC2AndSageMakerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeVpcs
+                  - ec2:DescribeSubnets
+                  - sagemaker:DeleteSpace
+                  - sagemaker:DeleteUserProfile
+                  - sagemaker:DeleteDomain
+                  - sagemaker:ListSpaces
+                Resource: '*'
 
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-
-  GatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
+  DefaultVpcFinder:
+    Type: Custom::ResourceForFindingDefaultVpc
     Properties:
-      VpcId: !Ref VPC
-      InternetGatewayId: !Ref InternetGateway
-
-  RouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-
-  Route:
-    Type: AWS::EC2::Route
-    DependsOn: GatewayAttachment
-    Properties:
-      RouteTableId: !Ref RouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-  SubnetRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnet
-      RouteTableId: !Ref RouteTable
+      ServiceToken: !GetAtt LambdaHelper.Arn
 
   SageMakerExecutionRole:
     Type: 'AWS::IAM::Role'
@@ -60,13 +128,17 @@ Resources:
               - 'sts:AssumeRole'
       Path: /
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonBedrockFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonOpenSearchServiceFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
 
   OpenSearchDomain:
     Type: "AWS::OpenSearchService::Domain"
     Properties:
-      DomainName: !Sub "chatbot-${AWS::StackName}"
-      EngineVersion: "OpenSearch_2.11"
+      DomainName: !Sub "${AWS::StackName}"
+      EngineVersion: "OpenSearch_2.15"
       ClusterConfig:
         InstanceType: "r6g.large.search"
         InstanceCount: 1
@@ -100,21 +172,21 @@ Resources:
   OpenSearchDomainEndpointParameter:
     Type: "AWS::SSM::Parameter"
     Properties:
-      Name: "chatbot-opensearch_domain_endpoint1"
+      Name: "chatbot-opensearch_domain_endpoint"
       Type: "String"
       Value: !GetAtt OpenSearchDomain.DomainEndpoint
 
   OpenSearchUserIDParameter:
     Type: "AWS::SSM::Parameter"
     Properties:
-      Name: "chatbot-opensearch_user_id1"
+      Name: "chatbot-opensearch_user_id"
       Type: "String"
       Value: "raguser"
 
   OpenSearchUserPasswordParameter:
     Type: "AWS::SSM::Parameter"
     Properties:
-      Name: "chatbot-opensearch_user_password1"
+      Name: "chatbot-opensearch_user_password"
       Type: "String"
       Value: "MarsEarth1!"
 
@@ -123,9 +195,8 @@ Resources:
     Properties:
       DomainName: 'WorkshopDomain'
       AuthMode: IAM
-      VpcId: !Ref VPC
-      SubnetIds: 
-        - !Ref PublicSubnet
+      VpcId: !GetAtt DefaultVpcFinder.VpcId
+      SubnetIds: !GetAtt DefaultVpcFinder.Subnets
       AppNetworkAccessType: PublicInternetOnly
       DefaultUserSettings:
         ExecutionRole: !GetAtt SageMakerExecutionRole.Arn
@@ -136,9 +207,32 @@ Resources:
       - StudioDomain
     Properties:
       DomainId: !Ref StudioDomain
-      UserProfileName: WorkshopUser
+      UserProfileName: workshop-user
       UserSettings: 
         ExecutionRole: !GetAtt SageMakerExecutionRole.Arn
+
+  JupyterAppSpace:
+    Type: AWS::SageMaker::Space
+    DependsOn: 
+      - StudioUserProfile
+    Properties:
+      DomainId: !Ref StudioDomain
+      OwnershipSettings:
+        OwnerUserProfileName: workshop-user
+      SpaceDisplayName: jupyterlab-space
+      SpaceName: jupyterlab-space
+      SpaceSettings:
+        AppType: JupyterLab
+        JupyterLabAppSettings:
+          CodeRepositories: 
+            - RepositoryUrl: https://github.com/kevmyung/text-to-sql-bedrock.git
+          DefaultResourceSpec:
+            InstanceType: ml.t3.medium  
+        SpaceStorageSettings:
+          EbsStorageSettings:
+            EbsVolumeSizeInGb: 50
+      SpaceSharingSettings:
+        SharingType: Private
 
 Outputs:
   SageMakerConsoleLink:
@@ -155,7 +249,7 @@ Outputs:
 
   DashboardURL:
     Description: "URL to access the OpenSearch Dashboards."
-    Value: !Sub "https://${OpenSearchDomain.DomainEndpoint}:443/app/opensearch_dashboards"
+    Value: !Sub "https://${OpenSearchDomain.DomainEndpoint}/_dashboards"
 
   UserID:
     Description: "User ID for OpenSearch domain."
@@ -164,3 +258,7 @@ Outputs:
   UserPassword:
     Description: "Password for OpenSearch domain."
     Value: "MarsEarth1!"
+
+  JupyterAppSpaceName:
+    Description: Name of the JupyterLab App Space
+    Value: !Ref JupyterAppSpace

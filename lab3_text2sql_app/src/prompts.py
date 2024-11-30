@@ -1,4 +1,3 @@
-from langchain.prompts.prompt import PromptTemplate
 
 _TABLE_SELECTION_SYS_PROMPT = """
 You are a data scientist that can help select the most relevant tables for SQL query tasks.
@@ -241,12 +240,6 @@ _CODE_GENERATION_USER_PROMPT = """
 <key_columns>
 </key_columns>
 """
-
-def get_sql_prompt():
-    return PromptTemplate.from_template(_SQL_AGENT_PROMPT)
-
-def get_agent_sys_prompt(language):
-    return [{"text":_SQL_AGENT_SYS_PROMPT.format(language=language)}]
 
 def create_prompt(sys_template, user_template, **kwargs):
     sys_prompt = [{"text": sys_template.format(**kwargs)}]
