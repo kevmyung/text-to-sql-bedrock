@@ -4,8 +4,10 @@ import streamlit as st
 import os
 import yaml
 import re
-from PIL import Image, UnidentifiedImageError
 from langchain.callbacks.base import BaseCallbackHandler
+from sqlalchemy import inspect, MetaData, Table, select
+from sqlalchemy.engine import Engine
+from sqlalchemy.schema import CreateTable
 
 class ToolStreamHandler(BaseCallbackHandler):
     def __init__(self, container, initial_text=""):
@@ -32,36 +34,102 @@ class ToolStreamHandler(BaseCallbackHandler):
         
         self.placeholder.markdown(self.text)
 
+class SQLDatabase:
+    def __init__(self, engine: Engine):
+        self.engine = engine
+        self.metadata = MetaData()
 
-def display_user_message(message_content: Union[str, List[dict]]) -> None:
-    if isinstance(message_content, str):
-        message_text = message_content
-    elif isinstance(message_content, dict):
-        message_text = message_content["input"][0]["content"][0]["text"]
-    else:
-        message_text = message_content[0]["text"]
+    def get_table_info(self, table_names: List[str]) -> str:
+        inspector = inspect(self.engine)
+        all_table_names = inspector.get_table_names()
 
-    message_content_markdown = message_text.split('</context>\n\n', 1)[-1]
-    st.markdown(message_content_markdown)
+        if not set(table_names).issubset(all_table_names):
+            missing_tables = set(table_names) - set(all_table_names)
+            raise ValueError(f"table_names {missing_tables} not found in database")
 
+        table_info = []
+        for table_name in table_names:
+            # Get table DDL
+            table = Table(table_name, self.metadata, autoload_with=self.engine)
+            create_table = str(CreateTable(table).compile(self.engine))
 
-def display_assistant_message(message_content: Union[str, dict]) -> None:
-    if isinstance(message_content, str):
-        st.markdown(message_content)
-    elif "response" in message_content:
-        st.markdown(message_content["response"])
+            # Get sample rows
+            sample_rows = self.get_sample_rows(table)
 
-def display_chat_messages(
-    uploaded_files: List[st.runtime.uploaded_file_manager.UploadedFile]
-) -> None:
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            if uploaded_files and "images" in message and message["images"]:
-                display_images(message["images"], uploaded_files)
-            if message["role"] == "user":
-                display_user_message(message["content"])
-            if message["role"] == "assistant":
-                display_assistant_message(message["content"])
+            table_info.append(f"{create_table.rstrip()}\n\n/*\n{sample_rows}\n*/")
+
+        return "\n\n".join(table_info)
+    
+    def get_sample_rows(self, table: Table) -> str:
+        query = select(table).limit(3)
+        with self.engine.connect() as conn:
+            result = conn.execute(query)
+            rows = result.fetchall()
+
+        if not rows:
+            return "No rows found"
+
+        column_names = result.keys()
+        rows_str = "\n".join([str(dict(zip(column_names, row))) for row in rows])
+        return f"3 rows from {table.name} table:\n{rows_str}"
+    
+
+    def get_table_schemas(self, table_names: List[str]):
+        try:
+            tables = [t.strip() for t in table_names]
+            data = self.get_table_info(tables)
+            if not data:
+                print("No data returned from DB")
+                return {}
+
+            statements = data.split("\n\n")
+
+            sql_statements = {}
+            sample_data = {}
+            for statement in statements:
+                if "CREATE TABLE" in statement:
+                    table_match = statement.split("CREATE TABLE ", 1)[1].split("(", 1)[0].strip()
+                    table_name = table_match.strip('`"')
+                    sql_statements[table_name] = statement.split("/*")[0].strip()
+                if "rows from" in statement:
+                    table_name = statement.split("rows from ", 1)[1].split(" table")[0]
+                    sample_data[table_name] = statement.split("*/")[0].strip()
+
+            table_details = {}
+            for table in tables:
+                table_details[table] = {
+                    "table": table,
+                    "cols": self.get_column_description(table),
+                    "create_table_sql": sql_statements.get(table, "Not available"),
+                    "sample_data": sample_data.get(table, "No sample data available")
+                }
+
+                if not table_details[table]["cols"]:
+                    print(f"No columns found for table {table}")
+
+            return table_details
+        except Exception as e:
+            print(f"Error in get_table_schemas: {str(e)}")
+            return {}
+
+    def get_column_description(self, table_name: str):
+        inspector = inspect(self.engine)
+        columns = inspector.get_columns(table_name)
+        return {col['name']: {'type': str(col['type']), 'nullable': col['nullable']} for col in columns}
+
+    def get_usable_table_names(self):
+        inspector = inspect(self.engine)
+        return inspector.get_table_names()
+
+    def run(self, query: str):
+        with self.engine.connect() as conn:
+            result = conn.execute(query)
+            rows = result.fetchall()
+
+        if not rows:
+            return ""
+
+        return [dict(row) for row in rows] 
 
 def stream_converse_messages(client, model, tool_config, messages, system, callback, tokens):
     response = client.converse_stream(
@@ -149,88 +217,6 @@ def init_tokens_and_costs() -> None:
     st.session_state.tokens['delta_total_tokens'] = 0
     st.session_state.tokens['total_tokens'] = 0
 
-
-class CustomUploadedFile:
-    def __init__(self, name, type, data):
-        self.name = name
-        self.type = type
-        self.data = data
-        self.file_id = name 
-
-    def read(self, *args):
-        return self.data.read(*args)
-
-    def seek(self, *args):
-        return self.data.seek(*args)
-
-    def readlines(self):
-        return self.data.readlines()
-    
-    def readline(self, *args):
-        return self.data.readline(*args)
-    
-    def tell(self):
-        return self.data.tell()
-
-def process_uploaded_files(uploaded_files: List[st.runtime.uploaded_file_manager.UploadedFile], message_images_list: List[str], uploaded_file_ids: List[str]) -> List[Union[dict, str]]:
-    num_cols = 10
-    cols = st.columns(num_cols)
-    i = 0
-    content_files = []
-
-    for uploaded_file in uploaded_files:
-        if uploaded_file.file_id not in message_images_list:
-            uploaded_file_ids.append(uploaded_file.file_id)
-            try:
-                # Try to open as an image
-                img = Image.open(uploaded_file)
-                with BytesIO() as output_buffer:
-                    img.save(output_buffer, format=img.format)
-                    content_image = base64.b64encode(output_buffer.getvalue()).decode("utf8")
-                content_files.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/jpeg",
-                        "data": content_image,
-                    },
-                })
-                with cols[i]:
-                    st.image(img, caption="", width=75)
-                    i += 1
-                if i >= num_cols:
-                    i = 0
-            except UnidentifiedImageError:
-                # If not an image, try to read as a text or pdf file
-                if uploaded_file.type in ['text/plain', 'text/csv', 'text/x-python-script']:
-                    # Ensure we're at the start of the file
-                    uploaded_file.seek(0)
-                    # Read file line by line
-                    lines = uploaded_file.readlines()
-                    text = ''.join(line.decode() for line in lines)
-                    content_files.append({
-                        "type": "text",
-                        "text": text
-                    })
-                    if uploaded_file.type == 'text/x-python-script':
-                        st.write(f"🐍 Uploaded Python file: {uploaded_file.name}")
-                    else:
-                        st.write(f"📄 Uploaded text file: {uploaded_file.name}")
-                elif uploaded_file.type == 'application/pdf':
-                    # Read pdf file
-                    pdf_file = pdfplumber.open(uploaded_file)
-                    page_text = ""
-                    for page in pdf_file.pages:
-                        page_text += page.extract_text()
-                    content_files.append({
-                        "type": "text",
-                        "text": page_text
-                    })
-                    st.write(f"📑 Uploaded PDF file: {uploaded_file.name}")
-                    pdf_file.close()
-
-    return content_files
-
 def load_model_config():
     file_dir = os.path.dirname(os.path.abspath(__file__))
     config_file = os.path.join(file_dir, "config.yml")
@@ -246,7 +232,6 @@ def load_language_config(language):
     with open(config_file, "r") as file:
         config = yaml.safe_load(file)
     return config['languages'][language]
-
 
 
 def sample_query_indexing(os_client, lang_config):
@@ -304,4 +289,4 @@ def schema_desc_indexing(os_client, lang_config):
                 st.error("Failed")
             else:
                 st.success("Success")
-    
+

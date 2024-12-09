@@ -2,51 +2,64 @@ import os
 import json
 import yaml
 import boto3
+import time
 import streamlit as st
-from opensearchpy import OpenSearch, RequestsHttpConnection
+from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from .common_utils import sample_query_indexing, schema_desc_indexing
-from .ssm import parameter_store
 from collections import namedtuple
+from dotenv import load_dotenv
 
 Document = namedtuple('Document', ['page_content', 'metadata'])
 
 class OpenSearchClient:
     def __init__(self, region_name, index_name, mapping_name, vector, text, output):
-        pm = parameter_store(region_name)
         config = self.load_opensearch_config()
+
+        credentials = boto3.Session().get_credentials()
+        auth = AWSV4SignerAuth(credentials, region_name, 'aoss')
+
+        collection_endpoint = config['COLLECTION_ENDPOINT']
+        host = collection_endpoint.replace("https://", "").split(':')[0]
+
         self.index_name = index_name
         self.config = config
-        domain_endpoint = pm.get_params(key="chatbot-opensearch_domain_endpoint", enc=False)
-        self.endpoint = f"https://{domain_endpoint}"
-        self.http_auth = (pm.get_params(key="chatbot-opensearch_user_id", enc=False), pm.get_params(key="chatbot-opensearch_user_password", enc=True))
         self.vector = vector
         self.text = text
         self.output = output
+
         self.mapping = {"settings": config['settings'], "mappings": config[mapping_name]}
         self.conn = OpenSearch(
-            hosts=[{'host': self.endpoint.replace("https://", ""), 'port': 443}],
-            http_auth=self.http_auth, 
+            hosts=[{'host': host, 'port': 443}],
+            http_auth=auth,
             use_ssl=True,
             verify_certs=True,
-            connection_class=RequestsHttpConnection
-        ) 
+            connection_class=RequestsHttpConnection,
+            pool_maxsize=20
+        )
         
     def load_opensearch_config(self):
-        file_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(file_dir, "opensearch.yml")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+        dotenv_path = os.path.join(project_root, '.env')
+        load_dotenv(dotenv_path)
 
+        config_path = os.path.join(current_dir, "opensearch.yml")
         with open(config_path, 'r', encoding='utf-8') as file:
-            return yaml.safe_load(file)
+            config = yaml.safe_load(file)
+        
+        config['COLLECTION_ENDPOINT'] = os.getenv('COLLECTION_ENDPOINT')
+        return config        
 
-    def is_index_present(self):
-        return self.conn.indices.exists(self.index_name)
-    
+
     def create_index(self):
-        self.conn.indices.create(self.index_name, body=self.mapping)
-
-    def delete_index(self):
-        if self.is_index_present():
-            self.conn.indices.delete(self.index_name)
+        index_name = self.index_name
+        if not self.conn.indices.exists(index=index_name):
+            print(f"Index {index_name} does not exist. Creating now...")
+        else:
+            self.conn.indices.delete(index=index_name)
+            print(f"Existing index '{index_name}' has been deleted. Create new one.")
+            time.sleep(2)
+        self.conn.indices.create(index_name, body=self.mapping)
 
 
 class OpenSearchVectorRetriever:
@@ -86,7 +99,6 @@ class OpenSearchVectorRetriever:
         }
 
         result = self.os_client.conn.search(index=self.os_client.index_name, body=semantic_query)
-
         documents = []
         for hit in result['hits']['hits']:
             source = hit['_source']
