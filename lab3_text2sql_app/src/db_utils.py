@@ -2,29 +2,132 @@ from botocore.config import Config
 import boto3
 import pandas as pd
 import uuid
-import ast
 import pytz
 import json
 import logging
 import os
 import re
 import streamlit as st
+import warnings
 from datetime import datetime
 from sqlalchemy import create_engine
-from typing import List, Dict
+from typing import List, Dict, Any, Union
 
-from langchain_community.utilities import SQLDatabase
+from sqlalchemy import inspect, MetaData, Table, select
+from sqlalchemy.engine import Engine
+from sqlalchemy.schema import CreateTable
+from sqlalchemy import exc as sa_exc
+
 from .common_utils import parse_json_format, stream_converse_messages
 from .opensearch import OpenSearchVectorRetriever, OpenSearchClient
 from .prompts import (
     get_table_selection_prompt, 
     get_query_generation_prompt, 
     get_prompt_refinement_prompt, 
-    get_sample_selection_prompt, 
     get_query_validation_prompt,
     get_answer_generation_prompt,
     get_global_prompt
 )
+
+warnings.filterwarnings('ignore', category=sa_exc.SAWarning)
+
+class SQLDatabase:
+    def __init__(self, engine: Engine):
+        self.engine = engine
+        self.metadata = MetaData()
+
+    def get_table_info(self, table_names: List[str]) -> str:
+        inspector = inspect(self.engine)
+        all_table_names = inspector.get_table_names()
+
+        if not set(table_names).issubset(all_table_names):
+            missing_tables = set(table_names) - set(all_table_names)
+            raise ValueError(f"table_names {missing_tables} not found in database")
+
+        table_info = []
+        for table_name in table_names:
+            # Get table DDL
+            table = Table(table_name, self.metadata, autoload_with=self.engine)
+            create_table = str(CreateTable(table).compile(self.engine))
+
+            # Get sample rows
+            sample_rows = self.get_sample_rows(table)
+
+            table_info.append(f"{create_table.rstrip()}\n\n/*\n{sample_rows}\n*/")
+
+        return "\n\n".join(table_info)
+    
+    def get_sample_rows(self, table: Table) -> str:
+        query = select(table).limit(3)
+        with self.engine.connect() as conn:
+            result = conn.execute(query)
+            rows = result.fetchall()
+
+        if not rows:
+            return "No rows found"
+
+        column_names = result.keys()
+        rows_str = "\n".join([str(dict(zip(column_names, row))) for row in rows])
+        return f"3 rows from {table.name} table:\n{rows_str}"
+    
+
+    def get_table_schemas(self, table_names: List[str]) -> Dict[str, Dict]:
+        try:
+            tables = [t.strip() for t in table_names]
+            data = self.get_table_info(tables)
+            if not data:
+                logging.warning("No data returned from DB")
+                return {}
+
+            statements = data.split("\n\n")
+
+            sql_statements = {}
+            sample_data = {}
+            for statement in statements:
+                if "CREATE TABLE" in statement:
+                    table_match = statement.split("CREATE TABLE ", 1)[1].split("(", 1)[0].strip()
+                    table_name = table_match.strip('`"')
+                    sql_statements[table_name] = statement.split("/*")[0].strip()
+                if "rows from" in statement:
+                    table_name = statement.split("rows from ", 1)[1].split(" table")[0]
+                    sample_data[table_name] = statement.split("*/")[0].strip()
+
+            table_details = {}
+            for table in tables:
+                table_details[table] = {
+                    "table": table,
+                    "cols": self.get_column_description(table),
+                    "create_table_sql": sql_statements.get(table, "Not available"),
+                    "sample_data": sample_data.get(table, "No sample data available")
+                }
+
+                if not table_details[table]["cols"]:
+                    print(f"No columns found for table {table}")
+
+            return table_details
+        except Exception as e:
+            logging.error(f"Error in get_table_schemas: {str(e)}")
+            return {}
+
+    def get_column_description(self, table_name: str) -> Dict[str, Dict]:
+        inspector = inspect(self.engine)
+        columns = inspector.get_columns(table_name)
+        return {col['name']: {'type': str(col['type']), 'nullable': col['nullable']} for col in columns}
+
+    def get_usable_table_names(self):
+        inspector = inspect(self.engine)
+        return inspector.get_table_names()
+
+    def run(self, query: str) -> Union[str, List[Dict[str, Any]]]:
+        with self.engine.connect() as conn:
+            result = conn.execute(query)
+            rows = result.fetchall()
+
+        if not rows:
+            return ""
+
+        return [dict(row) for row in rows]
+
 
 class DB_Tools:
     def __init__(self, tokens: dict, uri: str, dialect: str, model: str, region: str, sql_os_client: OpenSearchClient, schema_os_client: OpenSearchClient, language: str, prompt: str, history: str):
@@ -84,18 +187,17 @@ class DB_Tools:
             st.text("There is no similar samples.")
             return
         
-        for page_content in selected_samples:
+        for sample in selected_samples:
             try:
-                page_content_dict = json.loads(page_content)
-                for key, value in page_content_dict.items():
-                    if key == 'query':
-                        st.markdown(f"```\n{value}\n```")
-                    else:
-                        st.markdown(f"{value}")
-                st.markdown('<div style="margin: 5px 0;"><hr style="border: none; border-top: 1px solid #ccc; margin: 0;" /></div>', unsafe_allow_html=True)
-            except json.JSONDecodeError:
-                st.text("Invalid page_content format")  
+                input_text = sample.get('input', 'No input available')
+                query = sample.get('query', 'No query available')
 
+                st.markdown(f"**Input:** {input_text}")
+                st.markdown(f"**Query:**")
+                st.code(query, language='sql')
+                st.markdown('<div style="margin: 5px 0;"><hr style="border: none; border-top: 1px solid #ccc; margin: 0;" /></div>', unsafe_allow_html=True)
+            except Exception as e:
+                st.text(f"Error processing sample: {str(e)}") 
  
     def get_sample_queries(self): 
         sql_os_retriever = OpenSearchVectorRetriever(
@@ -104,24 +206,57 @@ class DB_Tools:
             k=10
         )
         samples = sql_os_retriever.vector_search(self.prompt, self.sql_os_client.index_name)
-        page_contents = [doc.page_content for doc in samples]
+        page_contents = [json.loads(doc.page_content) for doc in samples]
 
-        sample_inputs = [json.loads(content)['input'] for content in page_contents]
-        print(sample_inputs)
+        bedrock_agent_runtime = boto3.client('bedrock-agent-runtime', region_name=self.region)
+        rerank_model_id = "cohere.rerank-v3-5:0"
+        model_package_arn = f"arn:aws:bedrock:{self.region}::foundation-model/{rerank_model_id}"
 
-        sys_prompt, usr_prompt = get_sample_selection_prompt(sample_inputs, self.prompt)
-        response = self.boto3_client.converse(modelId=self.model, messages=usr_prompt, system=sys_prompt)
-        self.update_tokens(response)
-        try:
-            sample_ids = response['output']['message']['content'][0]['text']
-            if sample_ids == '""' or sample_ids.strip() == "":
-                return []
-            else:
-                sample_ids_list = [int(id.strip()) for id in sample_ids.split(',') if id.strip().isdigit()]
-                selected_samples = [page_contents[id] for id in sample_ids_list] if sample_ids_list else []
-                return selected_samples
-        except:
-            return []
+        text_sources = [
+            {
+                "type": "INLINE",
+                "inlineDocumentSource": {
+                    "type": "TEXT",
+                    "textDocument": {
+                        "text": content['input'],
+                    }
+                }
+            } for content in page_contents
+        ]
+
+        response = bedrock_agent_runtime.rerank(
+                    queries=[
+                        {
+                            "type": "TEXT",
+                            "textQuery": {
+                                "text": self.prompt
+                            }
+                        }
+                    ],
+                    sources=text_sources,
+                    rerankingConfiguration={
+                        "type": "BEDROCK_RERANKING_MODEL",
+                        "bedrockRerankingConfiguration": {
+                            "numberOfResults": 3,
+                            "modelConfiguration": {
+                                "modelArn": model_package_arn,
+                            }
+                        }
+                    }
+                )
+        
+        reranked_samples = []
+        for result in response['results']:
+            index = result['index']
+            sample_input = page_contents[index]['input']
+            sample_query = page_contents[index]['query']
+            reranked_samples.append({
+                'input': sample_input,
+                'query': sample_query,
+            })
+
+        return reranked_samples
+
 
     def get_table_summaries_by_similarities(self):
         schema_os_retriever = OpenSearchVectorRetriever(
@@ -179,8 +314,7 @@ class DB_Tools:
             tables = [t.strip() for t in table_names]
             sql_statements = {}
             sample_data = {}
-            data = self.db.get_table_info_no_throw(tables)
-            
+            data = self.db.get_table_info(tables)
             if not data:
                 logging.warning("No data returned from DB")
                 return {}
@@ -189,10 +323,10 @@ class DB_Tools:
 
             for statement in statements:
                 if "CREATE TABLE" in statement:
-                    table_match = re.search(r"CREATE TABLE `(\w+)`", statement)
+                    table_match = re.search(r"CREATE TABLE (?:`|\")?(\w+)(?:`|\")?", statement)
                     if table_match:
                         table_name = table_match.group(1)
-                        sql_statements[table_name] = statement
+                        sql_statements[table_name] = statement.split("/*")[0].strip()
                 elif "rows from" in statement:
                     table_name_match = re.search(r"rows from (\w+) table", statement)
                     if table_name_match:
@@ -201,21 +335,19 @@ class DB_Tools:
 
             table_details = {}
             for table in tables:
-                table_desc = self.get_column_description(table) if self.schema_os_client else {}
+                table_desc = self.get_column_description(table)
                 table_details[table] = {
                     "table": table,
                     "cols": table_desc if table_desc else {},
                     "create_table_sql": sql_statements.get(table, "Not available"),
                     "sample_data": sample_data.get(table, "No sample data available")
                 }
-                
+
                 if not table_details[table]["cols"]:
                     print(f"No columns found for table {table}")
-
             return table_details
-
         except Exception as e:
-            logging.error(f"An error occurred: {e}")
+            logging.error(f"Error in get_table_schemas: {str(e)}")
             return {}
     
     def get_explain_query(self, original_query):
@@ -233,29 +365,34 @@ class DB_Tools:
         }
         return explain_statements.get(self.dialect.lower(), f"Unsupported dialect: {self.dialect}. Please provide the EXPLAIN syntax manually.").format(query=original_query)
 
-    def save_to_csv(self, data, output_columns: List[str], query: str):
+    def save_to_csv(self, data, query: str):
         try:
-            data = ast.literal_eval(data)
-        except (ValueError, SyntaxError) as ve:
-            logging.error(f"Data conversion error: {ve}")
-            return {"failure_log": "There was an error processing the query results. Please check the query syntax and output columns."}
-        
-        if data:
-            df = pd.DataFrame(data, columns=output_columns)
+            if isinstance(data, str):
+                data = eval(data) 
+
+            if not data:
+                return {"failure_log": "No data to save."}
+
+            df = pd.DataFrame(data)
             df = df.where(pd.notnull(df), None)
-            
+
             current_time = datetime.now().strftime("%Y%m%d%H%M%S")
             random_id = str(uuid.uuid4())
             folder_path = "./result_files"
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
+            os.makedirs(folder_path, exist_ok=True)
+
             csv_file = f"{folder_path}/query_result_{current_time}_{random_id}.csv"
             query_file = f"{folder_path}/query_{current_time}_{random_id}.sql"
 
             df.to_csv(csv_file, index=False)
             with open(query_file, 'w') as file:
                 file.write(query)
+
             return csv_file, query_file, df
+
+        except Exception as e:
+            logging.error(f"Error in save_to_csv: {str(e)}")
+            return {"failure_log": f"An error occurred while saving the data: {str(e)}"}
 
     def query_failure_handling(self, log, query):
         self.tool_state["failure_log"] = log
@@ -284,14 +421,13 @@ class DB_Tools:
             st.write(refined_prompt)
         return refined_prompt
 
-    def query_generation(self, input: str):
+    def query_generation(self, input: str): # dummy input
         table_names = self.db.get_usable_table_names()
         combined_log = """
         failure_log: {failure_log}
         failed_query: {failed_query}
         retry_hint: {search_result}
         """.format(failure_log=self.tool_state["failure_log"], failed_query=self.tool_state["failed_query"], search_result=self.tool_state["search_result"])
-
 
         table_summaries = self.get_table_summaries_by_similarities() # RAG    
 
@@ -303,7 +439,6 @@ class DB_Tools:
             system=sys_prompt
         )
         self.update_tokens(response)
-
         # Loading Table Schemas
         table_names = response['output']['message']['content'][0]['text'].split(',')
         table_schemas = self.get_table_schemas(table_names)
@@ -339,13 +474,15 @@ class DB_Tools:
             
             parsed_json = parse_json_format(response['output']['message']['content'][0]['text'])
             query = parsed_json.get("final_query") 
-            output_columns = parsed_json.get("output_columns")
+            #output_columns = parsed_json.get("output_columns")
+
         except Exception as e:
             print(self.tool_state)
             return self.query_failure_handling(f"[E02] An issue unrelated to the query was encountered: {str(e)} (Model-related problem)", generated_query)
   
         try:
             result = self.db.run(query)
+
         except Exception as e:
             print(self.tool_state)
             return self.query_failure_handling(f"[E03] An error occurred while executing the final query: {str(e)}", query)
@@ -357,7 +494,7 @@ class DB_Tools:
             return {"message": "Query executed successfully, but no matching data found."}
         
         try:
-            csv_file, query_file, df = self.save_to_csv(result, output_columns, query)
+            csv_file, query_file, df = self.save_to_csv(result, query)
         except Exception as e:
             print(self.tool_state)
             return self.query_failure_handling(f"[E04] An error occurred while saving the results to CSV: {str(e)}", query)
@@ -475,7 +612,7 @@ class DB_Tool_Client:
         return boto3.client("bedrock-runtime", region_name=region, config=retry_config)
 
     def load_tool_config(self):
-        with open("./db_metadata/db_tool_config.json", 'r') as file:
+        with open("./src/db_tool_config.json", 'r') as file:
             return json.load(file)
 
     def save_log(self):

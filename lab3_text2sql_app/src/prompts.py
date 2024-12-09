@@ -67,11 +67,16 @@ Please select the most relevant sample question(s) from the provided samples to 
 - Response should be a valid CSV of sample indices (starting from 0), in the format "1,2".
 - If no relevant samples are found, return an empty string ("").
 </instruction>
+
+<sample_pool>
+{samples}
+</sample_pool>
 """
 
 _SAMPLES_SELECTION_USER_PROMPT = """
-Samples Pool: {samples}
 User Question: {question}
+
+Skip the preamble and provide only CSV format as specified in the instructions.
 """
 
 _QUERY_VALIDATION_SYS_PROMPT = """

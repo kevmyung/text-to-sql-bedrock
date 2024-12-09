@@ -15,8 +15,11 @@
                     "col": "ArtistId",
                     "col_desc": "Foreign key that references the artist of the album."
                 }
-            ]
-        },
+            ],
+            "table_summary": "Album table: Central music catalog hub linking artists to their recordings. Primary key (AlbumId) connects tracks and artists, enabling comprehensive music collection tracking and sales analysis across the database."
+        }
+    },
+    {
         "Artist": {
             "table_desc": "Holds artist information with an ID and name.",
             "cols": [
@@ -28,8 +31,11 @@
                     "col": "Name",
                     "col_desc": "Name of the artist."
                 }
-            ]
-        },
+            ],
+            "table_summary": "Artist table: Central music metadata repository linking artists to albums. Primary key (ArtistId) enables relational connections, serving as a core reference point for tracking musical creators across the music database schema."
+        }
+    },
+    {
         "Customer": {
             "table_desc": "Contains customer details and links to their support representative.",
             "cols": [
@@ -85,8 +91,11 @@
                     "col": "SupportRepId",
                     "col_desc": "Foreign key that references the employee who supports this customer."
                 }
-            ]
-        },
+            ],
+            "table_summary": "Customer table: Central customer management hub linking individual contact details with support representatives. Tracks global customer information and enables sales tracking via Invoice relationships, serving as a key connection point for customer-centric business operations."
+        }
+    },
+    {
         "Employee": {
             "table_desc": "Stores employee details, including their supervisory chain.",
             "cols": [
@@ -150,8 +159,11 @@
                     "col": "Email",
                     "col_desc": "Email address of the employee."
                 }
-            ]
-        },
+            ],
+            "table_summary": "Employee table tracks staff hierarchy, contact details, and employment info. Primary key is EmployeeId, with self-referencing ReportsTo for organizational structure. Supports customer service and internal management relationships in this music retail database."
+        }
+    },
+    {
         "Genre": {
             "table_desc": "Catalogs music genres with a unique identifier and name.",
             "cols": [
@@ -163,8 +175,11 @@
                     "col": "Name",
                     "col_desc": "Name of the genre."
                 }
-            ]
-        },
+            ],
+            "table_summary": "Genre table: Central music classification hub, linking tracks to genres via GenreId. Provides taxonomy for Track table, enabling genre-based filtering and analysis in this music-oriented database schema."
+        }
+    },
+    {
         "Invoice": {
             "table_desc": "Records details of transactions, linked to customers.",
             "cols": [
@@ -204,8 +219,11 @@
                     "col": "Total",
                     "col_desc": "Total amount of the invoice."
                 }
-            ]
-        },
+            ],
+            "table_summary": "Invoice table: Central transaction record linking customers to purchases. Primary key (InvoiceId) tracks unique sales, with CustomerId foreign key mapping transactions to specific customers. Captures billing details and total purchase value across the music sales database."
+        }
+    },
+    {
         "InvoiceLine": {
             "table_desc": "Details each line item on an invoice, linked to tracks and invoices.",
             "cols": [
@@ -229,8 +247,11 @@
                     "col": "Quantity",
                     "col_desc": "Quantity of the track sold in this invoice line."
                 }
-            ]
-        },
+            ],
+            "table_summary": "InvoiceLine tracks individual track sales within invoices, connecting Invoice and Track tables via foreign keys. Captures transaction details like quantity and unit price, enabling granular sales analysis and revenue tracking."
+        }
+    },
+    {
         "MediaType": {
             "table_desc": "Defines types of media for tracks.",
             "cols": [
@@ -242,8 +263,11 @@
                     "col": "Name",
                     "col_desc": "Name of the media type."
                 }
-            ]
-        },
+            ],
+            "table_summary": "MediaType table: Classifies track media formats (e.g., MP3, WAV) via unique ID, serving as a reference for Track table's media type categorization, enabling flexible digital music inventory management."
+        }
+    },
+    {
         "Playlist": {
             "table_desc": "Organizes tracks into playlists.",
             "cols": [
@@ -255,8 +279,11 @@
                     "col": "Name",
                     "col_desc": "Name of the playlist."
                 }
-            ]
-        },
+            ],
+            "table_summary": "Playlist table: Central hub for music collections, linking tracks across genres. Provides unique playlist IDs and names, enabling flexible music organization through the PlaylistTrack junction table, connecting diverse tracks into custom compilations."
+        }
+    },
+    {
         "PlaylistTrack": {
             "table_desc": "Links tracks to playlists.",
             "cols": [
@@ -268,8 +295,11 @@
                     "col": "TrackId",
                     "col_desc": "Foreign key that identifies the track on the playlist."
                 }
-            ]
-        },
+            ],
+            "table_summary": "PlaylistTrack: A junction table connecting Playlist and Track, enabling many-to-many relationships by mapping tracks to multiple playlists and playlists to multiple tracks, facilitating flexible music organization."
+        }
+    },
+    {
         "Track": {
             "table_desc": "Stores detailed information about music tracks, linked to albums, genres, and media types.",
             "cols": [
@@ -309,7 +339,8 @@
                     "col": "UnitPrice",
                     "col_desc": "Price per unit of this track."
                 }
-            ]
+            ],
+            "table_summary": "Track table: Central music repository linking albums, genres, and media types. Captures track metadata, pricing, and file details. Enables sales tracking, playlist management, and comprehensive music catalog organization through key relational connections."
         }
     }
 ]
