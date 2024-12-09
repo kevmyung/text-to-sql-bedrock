@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for Redshift Serverless setup'
+
+Parameters:
+  AdminUsername:
+    Type: String
+    Default: 'admin'
+    Description: 'The admin username for the Redshift Serverless cluster'
+
+  AdminUserPassword:
+    Type: String
+    Default: 'Admin123!'
+    Description: 'The admin password for the Redshift Serverless cluster'
+
+Resources:
+  RedshiftServerlessNamespace:
+    Type: AWS::RedshiftServerless::Namespace
+    Properties:
+      NamespaceName: 'test-namespace'
+      AdminUsername: !Ref AdminUsername
+      AdminUserPassword: !Ref AdminUserPassword
+      DbName: 'testdb'
+
+  RedshiftServerlessWorkgroup:
+    Type: AWS::RedshiftServerless::Workgroup
+    Properties:
+      WorkgroupName: 'test-workgroup'
+      NamespaceName: !Ref RedshiftServerlessNamespace
+      BaseCapacity: 32
+      PubliclyAccessible: true
+      Port: 5439
+
+Outputs:
+  NamespaceName:
+    Description: 'The name of the Redshift Serverless namespace'
+    Value: !Ref RedshiftServerlessNamespace
+
+  WorkgroupName:
+    Description: 'The name of the Redshift Serverless workgroup'
+    Value: !Ref RedshiftServerlessWorkgroup

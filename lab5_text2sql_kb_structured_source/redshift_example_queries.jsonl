@@ -1,0 +1,10 @@
+{"input": "all artists and their details from the database", "query": "SELECT * FROM testdb.public.Artist"}
+{"input": "All albums by AC/DC", "query": "SELECT * FROM testdb.public.Album WHERE ArtistId = (SELECT ArtistId FROM testdb.public.Artist WHERE Name = 'AC/DC')"}
+{"input": "All music tracks classified under the Rock genre", "query": "SELECT * FROM testdb.public.Track WHERE GenreId = (SELECT GenreId FROM testdb.public.Genre WHERE Name = 'Rock')"}
+{"input": "Total duration of all tracks in the music library", "query": "SELECT SUM(Milliseconds) FROM testdb.public.Track"}
+{"input": "All customer details for customers located in Canada", "query": "SELECT * FROM testdb.public.Customer WHERE Country = 'Canada'"}
+{"input": "All tracks from album with ID 5", "query": "SELECT COUNT(*) FROM testdb.public.Track WHERE AlbumId = 5"}
+{"input": "Total number of invoices in the system", "query": "SELECT COUNT(*) FROM testdb.public.Invoice"}
+{"input": "All music tracks longer than 5 minutes in duration", "query": "SELECT * FROM testdb.public.Track WHERE Milliseconds > 300000"}
+{"input": "Total purchase amount for each customer, showing only the top 5 biggest spenders", "query": "SELECT CustomerId, SUM(Total) AS TotalPurchase FROM testdb.public.Invoice GROUP BY CustomerId ORDER BY TotalPurchase DESC LIMIT 5"}
+{"input": "Total number of employees in the company", "query": "SELECT COUNT(*) FROM testdb.public.Employee"}
